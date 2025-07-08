@@ -1,0 +1,39 @@
+
+#Allow reply from inside of network
+iptables -A OUTPUT -p icmp --icmp-type echo-reply -d $SUBNET -j ACCEPT
+
+#FTP: Allow Windows only / Deny MINT
+iptables -A INPUT -p tcp -s $WINDOWS --dport 21 -j ACCEPT
+iptables -A INPUT -p tcp -s $WINDOWS --dport 20 -j ACCEPT
+
+# Deny Mint from using FTP, and log
+iptables -A INPUT -p tcp -s $MINT --dport 21 -j REJECT --reject-with tcp-reset
+iptables -A INPUT -p tcp -s $MINT --dport 20 -j REJECT --reject-with tcp-reset
+
+# 7) Deny ALL Telnet from both Mint and Windows
+# ----------------------
+iptables -A INPUT -p tcp -s $WINDOWS --dport 23 -j REJECT --reject-with tcp-reset
+iptables -A INPUT -p tcp -s $MINT --dport 23 -j REJECT --reject-with tcp-reset
+# REJECT used to provide clear refusal for deprecated service
+
+# ----------------------
+# 8) SSH: Allow Mint only / Deny Windows
+# ----------------------
+iptables -A INPUT -p tcp -s $MINT --dport 22 -j ACCEPT
+iptables -A INPUT -p tcp -s $WINDOWS --dport 22 -j REJECT --reject-with tcp-reset
+# SSH denied to Windows with REJECT to indicate unauthorized access clearly
+
+# ----------------------
+# 9) Web: Allow Mint only / Deny Windows
+# ----------------------
+iptables -A INPUT -p tcp -s $MINT --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp -s $WINDOWS --dport 80 -j REJECT --reject-with tcp-reset
+# Apache access from Windows explicitly denied
+
+
+
+#This is for logging dropped packets
+iptables -N LOGGING
+iptables -A INPUT -j LOGGING
+iptables -A OUTPUT -j LOGGING
+iptables -A LOGGING -j LOG --log-prefix "Dropped Packets: " --log-level 4
